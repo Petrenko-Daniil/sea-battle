@@ -10,7 +10,7 @@ export class GameService {
         private gameRepository: Repository<GameEntity>
     ) {}
 
-    private async checkPlayer(playerToken): Promise<boolean> {
+    private async isPlayerInAnyGame(playerToken): Promise<boolean> {
         return !!(await this.gameRepository
             .createQueryBuilder('game')
             .where('game.firstPlayerToken = :token', { token: playerToken } )
@@ -22,9 +22,9 @@ export class GameService {
         const checkToken = await this.gameRepository.findOne( { where: {
             firstPlayerToken: data.token
             }} )
-        const additionalCheck = await this.checkPlayer(data.token)
+        const isPlayerBusy = await this.isPlayerInAnyGame(data.token)
 
-        if(!checkToken && !additionalCheck){
+        if(!checkToken && !isPlayerBusy){
             const gameData = await this.gameRepository.create( {firstPlayerToken: data.token} )
             return await this.gameRepository.save(gameData)
         }
@@ -32,24 +32,26 @@ export class GameService {
     }
 
     async joinGame(data): Promise<GameEntity | null> {
-        const gameData = await this.gameRepository.findOne( { where: {
-            firstPlayerToken: data.enemyToken
-            }})
+        const gameData = await this.gameRepository.findOne( {
+            where: {
+                firstPlayerToken: data.enemyToken
+            }
+        })
 
         if(!gameData){
-            return null
+            throw new Error('Game not found.')
         }
 
         const checkSecondPlayer = gameData.secondPlayerToken || null
 
         const id = gameData.id
-        const additionalCheck = this.checkPlayer(data.token)
+        const isPlayerBusy = this.isPlayerInAnyGame(data.token)
 
         if(checkSecondPlayer) {
             throw new Error('Game is full')
         }
 
-        if(!additionalCheck){
+        if(!isPlayerBusy){
             throw new Error('Player is already in game')
         }
 
@@ -58,7 +60,7 @@ export class GameService {
     }
 
     async deleteGame(data): Promise<GameEntity | null>{
-        const additionalCheck = await this.checkPlayer(data.token)
+        const additionalCheck = await this.isPlayerInAnyGame(data.token)
 
         console.log(additionalCheck)
 

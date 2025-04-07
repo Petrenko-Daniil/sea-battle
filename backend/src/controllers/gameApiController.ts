@@ -4,7 +4,8 @@ import {
     Delete,
     HttpException,
     HttpStatus,
-    Post
+    Post,
+    Res
 } from "@nestjs/common";
 import {DtoGameDelete, DtoGameJoin, DtoGameStart} from "../dto/dtoGame";
 import {GameService} from "../services/gameService";
@@ -14,11 +15,21 @@ export class GameApiController {
     constructor(private gameService: GameService) {}
 
     @Post('api/game/create')
-    async createGame(@Body() dtoGameStart: DtoGameStart): Promise<HttpException>{
-        if(await this.gameService.createGame(dtoGameStart)){
-            throw new HttpException('Created game', HttpStatus.OK)
+    async createGame(@Body() dtoGameStart: DtoGameStart, @Res() res: Res) {
+        try {
+            await this.gameService.createGame(dtoGameStart)
+            return res
+                .status(200)
+                .json({
+                    message: "Created game"
+                })
+        } catch (error: any){
+            return res
+                .status(400)
+                .json({
+                    message: error.message
+                })
         }
-        throw new HttpException("Game is not created", HttpStatus.FORBIDDEN)
     }
 
     @Post('api/game/join')
