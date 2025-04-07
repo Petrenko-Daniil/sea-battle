@@ -40,15 +40,21 @@ export class GameService {
             return null
         }
 
-        const checkSecondPlayer = gameData.secondPlayerToken
+        const checkSecondPlayer = gameData.secondPlayerToken || null
+
         const id = gameData.id
         const additionalCheck = this.checkPlayer(data.token)
 
-        if(gameData && !checkSecondPlayer && !additionalCheck) {
-            await this.gameRepository.update(id, {secondPlayerToken: data.token} )
-            return gameData
+        if(checkSecondPlayer) {
+            throw new Error('Game is full')
         }
-        return null
+
+        if(!additionalCheck){
+            throw new Error('Player is already in game')
+        }
+
+        await this.gameRepository.update(id, {secondPlayerToken: data.token} )
+        return gameData
     }
 
     async deleteGame(data): Promise<GameEntity | null>{
