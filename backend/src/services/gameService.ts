@@ -11,7 +11,7 @@ export class GameService {
     ) {}
 
     private async checkPlayer(playerToken): Promise<boolean> {
-        return !(await this.gameRepository
+        return !!(await this.gameRepository
             .createQueryBuilder('game')
             .where('game.firstPlayerToken = :token', { token: playerToken } )
             .orWhere('game.secondPlayerToken = :token', { token: playerToken } )
@@ -19,12 +19,12 @@ export class GameService {
     }
 
     async createGame(data): Promise<GameEntity | null> {
-
         const checkToken = await this.gameRepository.findOne( { where: {
             firstPlayerToken: data.token
             }} )
+        const additionalCheck = await this.checkPlayer(data.token)
 
-        if(!checkToken){
+        if(!checkToken && !additionalCheck){
             const gameData = await this.gameRepository.create( {firstPlayerToken: data.token} )
             return await this.gameRepository.save(gameData)
         }
@@ -35,10 +35,16 @@ export class GameService {
         const gameData = await this.gameRepository.findOne( { where: {
             firstPlayerToken: data.enemyToken
             }})
-        const checkSecondPlayer = gameData.secondPlayerToken || null
-        const id = gameData.id
 
-        if(gameData && !checkSecondPlayer) {
+        if(!gameData){
+            return null
+        }
+
+        const checkSecondPlayer = gameData.secondPlayerToken
+        const id = gameData.id
+        const additionalCheck = this.checkPlayer(data.token)
+
+        if(gameData && !checkSecondPlayer && !additionalCheck) {
             await this.gameRepository.update(id, {secondPlayerToken: data.token} )
             return gameData
         }
@@ -46,7 +52,6 @@ export class GameService {
     }
 
     async deleteGame(data): Promise<GameEntity | null>{
-
         const additionalCheck = await this.checkPlayer(data.token)
 
         console.log(additionalCheck)
